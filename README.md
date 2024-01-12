@@ -1,1 +1,1 @@
-Bot for uploading file to server
+telegram Bot for uploading file to server
