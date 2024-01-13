@@ -2,7 +2,7 @@ import asyncio
 import telegram
 import logging
 from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -10,20 +10,27 @@ logging.basicConfig(
 )
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="I'm a bot, please talk to me!"
+    )
 
-    if 'has_started' not in context.chat_data.get(chat_id, {}):
-        await context.bot.send_message(chat_id=chat_id, text="Hello coptain!\nSend me a file" )
-        context.chat_data[chat_id]['has_started'] = True
+async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
 
-    else:
-        await context.bot.send_message(chat_id=chat_id, text="Good to see you again captain!")
+async def caps(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text_caps = ' '.join(context.args).upper()
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=text_caps)
 
 if __name__ == '__main__':
-    application = ApplicationBuilder().token('6821047694:AAHpK7nIUrQW-53ifVtPwBaQikGaHM4s_dg').build()
-
+    application = ApplicationBuilder().token('6594664984:AAFQtIMLpdppT2xFeaGmi7Tb0djSx4qVpQc').build()
+    
+    echo_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), echo)
     start_handler = CommandHandler('start', start)
+    caps_handler = CommandHandler('caps', caps)
+
     application.add_handler(start_handler)
+    application.add_handler(echo_handler)
+    application.add_handler(caps_handler)
 
     application.run_polling()
-
