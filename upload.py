@@ -5,12 +5,13 @@ import logging
 from telegram import Update, InlineQueryResultArticle, InputTextMessageContent
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, InlineQueryHandler, CallbackContext, ConversationHandler
 
-alluser = ['admin','javad']
-allpass = ['1234','0150']
+user_chat_history = {}
+alluser = ['admin','javad','Javad','Admin']
+allpass = ['1234','0150','Admin']
 USERNAME, PASSWORD, LOGGEDIN = range(3)
 
 
-openai.api_key = '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'
+openai.api_key = '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'
 
 
 logging.basicConfig(
@@ -38,14 +39,18 @@ async def password(update, contex):
         await update.message.reply_text('Access denied!\nTry again by using /start')
         return ConversationHandler.END
 
-#async loggedin(update: Update, context: ContextTypes.DEFUALT_TYPES)
-
 async def reply_to_message(update: Update, context: CallbackContext):
     user_input = update.message.text
+    user_id = update.effective_user.id
+
+    if user_id not in user_chat_history:
+        user_chat_history[user_id] = []
+
+    user_chat_history[user_id].append({"role": "user", "content": user_input})
 
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-16k",
-        messages=[{"role": "system", "content": "you are telegrambot which help people to solve their problem also you are a little foul-mouthed and angry."}, {"role": "user", "content": user_input}],
+        messages=[{"role": "system", "content": "you are a Telegram bot designed to assist users in solving problems. You have a helpful."}, *user_chat_history[user_id]],
         n=1,
         stop=None
     )
@@ -69,9 +74,6 @@ async def uploader(update: Update, context ):
         
 if __name__ == '__main__':
     application = ApplicationBuilder().token('6594664984:AAFQtIMLpdppT2xFeaGmi7Tb0djSx4qVpQc').build()
-#   start_handler = CommandHandler('start', start)
-#    chat_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), reply_to_message)
-#    upload_handler = MessageHandler(filters.Document.ALL | filters.VIDEO, uploader)
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
@@ -85,6 +87,4 @@ if __name__ == '__main__':
 
 
     application.add_handler(conv_handler)
- #   application.add_handler(chat_handler)
-#    application.add_handler(upload_handler)
     application.run_polling()
