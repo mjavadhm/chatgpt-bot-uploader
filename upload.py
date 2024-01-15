@@ -9,11 +9,12 @@ user_chat_history = {}
 user_chat_setting = {}
 alluser = ['admin','javad','Javad','Admin']
 allpass = ['1234','0150','Admin']
-USERNAME, PASSWORD, LOGGEDIN, WAIT_FOR_USER_MESSAGE = range(4)
+fnum = 0
+USERNAME, PASSWORD, CONVERSATION, WAIT_FOR_USER_MESSAGE, UPLOAD = range(5)
 
 
 
-openai.api_key = '******'
+openai.api_key = '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'
 
 
 logging.basicConfig(
@@ -25,15 +26,17 @@ async def start(update, context):
     user_id = update.effective_user.id
     if user_id not in user_chat_history:
         user_chat_setting[user_id] = "you are a Telegram bot designed to assist users in solving problems. You are helpful."
-
+    await update.message.reply_text("Ask me anything or use /about")
+    return CONVERSATION
+async def login(update, context):
     await update.message.reply_text("Enter your username")
     return USERNAME
 
 async def about(update, context):
-    await update.message.reply_text('Another chatgpt bot but! youcan choose role and save your files\n(🤥We respect your privacy🤥)\nyou can see list of the commands in /commands\nGithub link : https://github.com/mjavadhm/juploadbot/')
+    await update.message.reply_text('Another chatgpt bot but! youcan choose role and save your files\nlist of the commands in /commands\nGithub link : https://github.com/mjavadhm/juploadbot/')
 
 async def commandsa(update, contex):
-    await update.message.reply_text("/start ---> Login\n/clear_history ---> Start new chat and clear history\n/set_role <input> ---> set bot role\n/reset_role ---> default setting for bot\n/about ---> More information about Bot")
+    await update.message.reply_text("/start ---> Login\n/clear_history ---> Start new chat(clear history)\n/upload ---> Upload files\n/set_role ---> set bot role\n/reset_role ---> default setting for bot\n/about ---> More information about Bot")
 
 async def username(update, contex):
     global usern
@@ -45,15 +48,15 @@ async def password(update, contex):
     global passn
     passn = update.message.text
     if usern in alluser and passn in allpass:
-        await update.message.reply_text('Logged in succesfully!\nAsk me anything you want or just send me a file(use /about for more information)')
-        return LOGGEDIN
+        await update.message.reply_text('Logged in succesfully!🤝\nAsk me anything you want or just send me a file(use /about for more information)')
+        return UPLOAD
     else:
-        await update.message.reply_text('Access denied!\nTry again by using /start')
-        return ConversationHandler.END
+        await update.message.reply_text('💩Access denied!💩')
+        return CONVERSATION
 
 async def role(update, context):
     user_id = update.effective_user.id
-    await update.message.reply_text(f'Your role has been set to: {user_chat_setting[user_id]}')
+    await update.message.reply_text(f'bot role is : {user_chat_setting[user_id]}')
 
 async def set_role(update, context):
     await update.message.reply_text('Enter bot role:')
@@ -62,8 +65,8 @@ async def set_role(update, context):
 async def get_user_message(update, context):
     user_id = update.effective_user.id
     user_chat_setting[user_id] = update.message.text
-    await update.message.reply_text(f'Your role has been set to: {user_chat_setting[user_id]}')
-    return LOGGEDIN
+    await update.message.reply_text(f'Your bot role is: \'{user_chat_setting[user_id]}\'')
+    return CONVERSATION
 
 async def reset_role(update, contex):
     user_id = update.effective_user.id
@@ -96,22 +99,32 @@ async def clear_history(update, contex):
 
 
 async def uploader(update: Update, context ):
+    global fnum
     if update.message.video:
+    
         video_file = await context.bot.get_file(update.message.video.file_id)
-        video_path = f'/var/www/html/telegram/{update.message.video.file_name}.mp4'
+        video_path = f'/var/www/html/telegram/{update.message.video.file_name}{fnum}.mp4'
+        fnum = fnum+1
         await video_file.download_to_drive(video_path)
         await update.message.reply_text(f'Video {update.message.video.file_name} downloaded to {video_path}')
+        return CONVERSATION
+    
     elif update.message.document:
+    
         file = await context.bot.get_file(update.message.document.file_id)
         file_path = f'/var/www/html/telegram/{update.message.document.file_name}'
         await file.download_to_drive(file_path)
         await update.message.reply_text(f'File {update.message.document.file_name} downloaded to {file_path}')
+        return CONVERSATION
+    
     else:
+    
         await update.message.reply_text('Unsupported file type.')
+        return CONVERSATION
 
         
 if __name__ == '__main__':
-    application = ApplicationBuilder().token('6594664984:AAFQtIMLpdppT2xFeaGmi7Tb0djSx4qVpQc').build()
+    application = ApplicationBuilder().token('6803449290:AAHU-0V179di9czKWZ1rxP1_jOJsn0eLh30').build()
     
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
@@ -122,9 +135,9 @@ if __name__ == '__main__':
             PASSWORD: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, password)
             ],
-            LOGGEDIN: [
+            CONVERSATION: [
                 MessageHandler(filters.TEXT & (~filters.COMMAND), reply_to_message),
-                MessageHandler(filters.Document.ALL | filters.VIDEO, uploader),
+                CommandHandler('upload',login),
                 CommandHandler('clear_history',clear_history),
                 CommandHandler('about',about),
                 CommandHandler('commands',commandsa),
@@ -134,6 +147,9 @@ if __name__ == '__main__':
             ],
             WAIT_FOR_USER_MESSAGE: [
                 MessageHandler(filters.TEXT, get_user_message)
+            ],
+            UPLOAD: [
+                MessageHandler(filters.Document.ALL | filters.VIDEO, uploader)
             ],
         },
         fallbacks=[],
